@@ -1,5 +1,6 @@
 ﻿using AzureAlertHubFunctions.Dtos;
 using AzureAlertHubFunctions.Interfaces;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -8,7 +9,7 @@ namespace AzureAlertHubFunctions.Services
 {
     public class TESTManagement : IServiceManagement
     {
-        public ServiceManagementResponseDto CreateIncident(AlertEntity alert)
+        public ServiceManagementResponseDto CreateIncident(AlertEntity alert, ILogger log)
         {
             string number = System.DateTime.Now.Ticks.ToString();
             ServiceManagementResponseDto result = new ServiceManagementResponseDto();

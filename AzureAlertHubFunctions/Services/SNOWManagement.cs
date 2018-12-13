@@ -1,5 +1,6 @@
 ﻿using AzureAlertHubFunctions.Dtos;
 using AzureAlertHubFunctions.Interfaces;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -10,7 +11,7 @@ namespace AzureAlertHubFunctions.Services
 {
     public class SNOWManagement : IServiceManagement
     {
-        public ServiceManagementResponseDto CreateIncident(AlertEntity alert)
+        public ServiceManagementResponseDto CreateIncident(AlertEntity alert, ILogger log)
         {
             ServiceManagementResponseDto response = null;
 
@@ -38,6 +39,10 @@ namespace AzureAlertHubFunctions.Services
                 {
                     var JsonDataResponse = msg.Content.ReadAsStringAsync().Result;
                     response = Newtonsoft.Json.JsonConvert.DeserializeObject<ServiceManagementResponseDto>(JsonDataResponse);
+                }
+                else
+                {
+                    log.LogError($"Could not reach SNOW server. HTTP result: {msg.StatusCode.ToString()} - Message: {msg.RequestMessage.ToString()} - {msg.ToString()}");
                 }
             }
 

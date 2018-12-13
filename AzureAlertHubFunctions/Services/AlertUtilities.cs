@@ -59,7 +59,7 @@ namespace AzureAlertHubFunctions.Services
                     if (String.IsNullOrEmpty(alert.IncidentId))
                     {
                         // We don't yet have an IncidentId for this alert
-                        ServiceManagementResponseDto incident = serviceManagemement.CreateIncident(alert);
+                        ServiceManagementResponseDto incident = serviceManagemement.CreateIncident(alert, log);
                         if (incident != null && incident.result != null)
                         {
                             alert.IncidentId = incident.result.number;
