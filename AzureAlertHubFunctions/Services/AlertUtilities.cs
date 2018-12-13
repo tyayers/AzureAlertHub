@@ -32,6 +32,8 @@ namespace AzureAlertHubFunctions.Services
             {
                 string SubscriptionId = obj["data"]["SubscriptionId"].ToString();
                 string AlertRuleName = obj["data"]["AlertRuleName"].ToString();
+                string LogAnalyticsUrl = "";
+                if (obj["data"]["LinkToSearchResults"] != null) LogAnalyticsUrl = obj["data"]["LinkToSearchResults"].ToString();
                 string ResourceName = GetResourceName(AlertRuleName, obj, log);
                 string ClientInstance = GetClientInstance(AlertRuleName, ResourceName, payload, log);
 
@@ -45,6 +47,7 @@ namespace AzureAlertHubFunctions.Services
                         alert.Payload = payload;
                         alert.SearchIntervalStartTimeUtc = DateTime.Parse(obj["data"]["SearchIntervalStartTimeUtc"].ToString());
                         alert.SearchIntervalEndTimeUtc = DateTime.Parse(obj["data"]["SearchIntervalEndtimeUtc"].ToString());
+                        alert.LogAnalyticsUrl = LogAnalyticsUrl;
                         alert.ClientInstance = ClientInstance;
                     }
                     else
