@@ -16,7 +16,8 @@ namespace AzureAlertHubFunctions.Dtos
         public string assignment_group { get; set; }
         public string group_family { get; set; }
         public string location { get; set; }
-        public int gravity { get; set; }
-        public int impact { get; set; }
+        public string gravity { get; set; }
+        public string impact { get; set; }
+        public string stage { get; set; }
     }
 }

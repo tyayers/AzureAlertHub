@@ -17,6 +17,17 @@ namespace AzureAlertHubFunctions.Services
 
             using (HttpClient client = new HttpClient())
             {
+                string serviceManagementCredentials = System.Environment.GetEnvironmentVariable("ServiceManagementCredentials");
+                if (!String.IsNullOrEmpty(serviceManagementCredentials))
+                {
+                    var byteArray = Encoding.ASCII.GetBytes(serviceManagementCredentials);
+                    client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
+                }
+
+                string serviceManagementUserAgent = System.Environment.GetEnvironmentVariable("ServiceManagementUserAgent");
+                if (!String.IsNullOrEmpty(serviceManagementUserAgent)) 
+                    client.DefaultRequestHeaders.Add("User-Agent", serviceManagementUserAgent);
+
                 ServiceManagementDto payload = new ServiceManagementDto()
                 {
                     caller_id = System.Environment.GetEnvironmentVariable("ServiceManagementCallerId"),
@@ -26,15 +37,17 @@ namespace AzureAlertHubFunctions.Services
                     contact_type = System.Environment.GetEnvironmentVariable("ServiceManagementContactType"),
                     short_description = alert.AlertName,
                     description = alert.LogAnalyticsUrl,
-                    assignment_group = System.Environment.GetEnvironmentVariable("ServiceManagementContactType"),
+                    assignment_group = System.Environment.GetEnvironmentVariable("ServiceManagementAssignmentGroup"),
                     group_family = System.Environment.GetEnvironmentVariable("ServiceManagementGroupFamily"),
                     location = System.Environment.GetEnvironmentVariable("ServiceManagementLocation"),
-                    gravity = Convert.ToInt16(System.Environment.GetEnvironmentVariable("ServiceManagementGravity")),
-                    impact = Convert.ToInt16(System.Environment.GetEnvironmentVariable("ServiceManagementImpact"))
+                    gravity = System.Environment.GetEnvironmentVariable("ServiceManagementGravity"),
+                    impact = System.Environment.GetEnvironmentVariable("ServiceManagementImpact"),
+                    stage = System.Environment.GetEnvironmentVariable("ServiceManagementStage")
                 };
 
                 var content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
-                HttpResponseMessage msg = client.PostAsync(System.Environment.GetEnvironmentVariable("ServiceManagementUrl"), content).Result;
+                string snowUrl = System.Environment.GetEnvironmentVariable("ServiceManagementUrl");
+                HttpResponseMessage msg = client.PostAsync(snowUrl, content).Result;
                 if (msg.IsSuccessStatusCode)
                 {
                     var JsonDataResponse = msg.Content.ReadAsStringAsync().Result;
@@ -42,7 +55,8 @@ namespace AzureAlertHubFunctions.Services
                 }
                 else
                 {
-                    log.LogError($"Could not reach SNOW server. HTTP result: {msg.StatusCode.ToString()} - Message: {msg.RequestMessage.ToString()} - {msg.ToString()}");
+                    var JsonDataResponse = msg.Content.ReadAsStringAsync().Result;
+                    log.LogError($"Could not reach SNOW server: {msg.ToString()} - {JsonDataResponse.ToString()}");
                 }
             }
 
