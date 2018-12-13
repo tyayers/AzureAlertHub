@@ -12,6 +12,29 @@ Deploy the Azure Functions project here to Azure, and configure the environment 
 
 After the functions are configure, configure the Function AzureAlertFunction to be the trigger for any Azure Monitor alerts.  When the alerts are triggered, you will see them in the Storage Account under Tables > Alerts and AlertIncidents.
 
+## Environment Variables
+These environment variables must be configured for the functions to work correctly.
+
+### Required 
+
+- **AzureWebJobsStorage**: "The storage connection string for the web jobs (required)"
+- **FUNCTIONS_WORKER_RUNTIME**: must be set to "dotnet"
+- **StorageConnectionString**: The storage connection string for the alert tables
+- **ServiceManagementType**: Either "TEST" for a test service management service or "SNOW" for ServiceNow
+
+### Variables only for ServiceNow configuration (ServiceManagementType="SNOW")
+- ServiceManagementUrl: If ServiceManagementType is set to SNOW, the URL where ServiceNow can be reached
+- ServiceManagementCallerId: A caller_id property which is forwarded to SNOW
+- ServiceManagementUser": A user property which is forwarded to SNOW
+- ServiceManagementBusinessService: A business_service property which is forwarded to SNOW
+- ServiceManagementITService: An it_service property which is forwarded to SNOW
+- ServiceManagementContactType: a phone property which is forwarded to SNOW
+- ServiceManagementAssignmentGroup: An assignment_group property which is forwarded to SNOW
+- ServiceManagementGroupFamily: A group_family property which is forwarded to SNOW
+- ServiceManagementLocation: A location property which is forwarded to SNOW
+- ServiceManagementGravity": A gravity property which is forwarded to SNOW
+- ServiceManagementImpact": An impact property which is forwarded to SNOW
+
 # Usage
 
 You will also see that multiple events only increases the Counter property, and does not create new entries.  This goes the same for calling the Service Management system.

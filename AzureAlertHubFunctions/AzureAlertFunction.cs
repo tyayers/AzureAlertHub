@@ -21,7 +21,15 @@ namespace AzureAlertHubFunctions
         
         static AzureAlertFunction()
         {
-            alertUtils = new AlertUtilities(new TESTManagement());
+            string ServiceManagementHost = System.Environment.GetEnvironmentVariable("ServiceManagementType");
+            if (ServiceManagementHost.ToUpper() == "SNOW")
+            {
+                alertUtils = new AlertUtilities(new SNOWManagement());
+            }
+            else
+            {
+                alertUtils = new AlertUtilities(new TESTManagement());
+            }
         }
 
         [FunctionName("AzureAlertFunction")]

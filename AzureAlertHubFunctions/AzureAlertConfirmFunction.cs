@@ -22,13 +22,13 @@ namespace AzureAlertHubFunctions
         static AzureAlertConfirmFunction()
         {
             string ServiceManagementHost = System.Environment.GetEnvironmentVariable("ServiceManagementType");
-            if (String.IsNullOrEmpty(ServiceManagementHost) || ServiceManagementHost.ToUpper() == "TEST")
+            if (ServiceManagementHost.ToUpper() == "SNOW")
             {
-                alertUtils = new AlertUtilities(new TESTManagement());
+                alertUtils = new AlertUtilities(new SNOWManagement());
             }
             else
             {
-                alertUtils = new AlertUtilities(new SNOWManagement());
+                alertUtils = new AlertUtilities(new TESTManagement());
             }
         }
 
