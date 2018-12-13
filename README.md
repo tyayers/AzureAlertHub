@@ -1,10 +1,12 @@
 # Azure Alert Hub
 A project to collect, filter and forward alerts in Azure to a Service Management system such as ServiceNow (for incident management), mute further alerts until a confirmation is sent from the Service Management system to prevent event flooding, and provide a return-channel to get an incident update to close the alert.
 
-## Flow 1: Alert Action from Azure Monitor triggers the Azure Function AzureAlertFunction
+## Flow 1: Alert Action
+An Alert from Azure Monitor triggers the Azure Function "AzureAlertFunction" creating an entry in the Alerts table, and incrementing the count with every new alert with the same keys.
 ![Alert Flow 1](img/AlertFlow1.png "text")
 
-## Flow 2: Service Management system calls Azure Function AzureAlertConfirmFunction to confirm the incident has been closed.
+## Flow 2: Service Management Confirmation
+The Service Management system confirms that the incident is closed, alert is removed from the Alerts table, any new Alert will create a new Incident / start a new count.
 ![Alert Flow 2](img/AlertFlow1.png "text")
 
 # Installation / Configuration
