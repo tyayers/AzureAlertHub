@@ -7,9 +7,9 @@ namespace AzureAlertHubFunctions.Dtos
 {
     public class AlertEntity : TableEntity
     {
-        public AlertEntity(string resourceName, string alertName)
-            : base(resourceName, alertName) {
-            Resource = resourceName;
+        public AlertEntity(string clientInstance, string alertName)
+            : base(clientInstance, alertName) {
+            ClientInstance = clientInstance;
             AlertName = alertName;
         }
 

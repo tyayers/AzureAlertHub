@@ -56,7 +56,9 @@ namespace AzureAlertHubFunctions.Services
                 else
                 {
                     var JsonDataResponse = msg.Content.ReadAsStringAsync().Result;
-                    log.LogError($"Could not reach SNOW server: {msg.ToString()} - {JsonDataResponse.ToString()}");
+                    string responseMessage = "";
+                    if (JsonDataResponse != null) responseMessage = JsonDataResponse.ToString();
+                    log.LogError($"Could not reach SNOW server: {msg.ToString()} - {responseMessage}");
                 }
             }
 

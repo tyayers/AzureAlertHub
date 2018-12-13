@@ -48,7 +48,7 @@ namespace AzureAlertHubFunctions.Services
                         alert.SearchIntervalStartTimeUtc = DateTime.Parse(obj["data"]["SearchIntervalStartTimeUtc"].ToString());
                         alert.SearchIntervalEndTimeUtc = DateTime.Parse(obj["data"]["SearchIntervalEndtimeUtc"].ToString());
                         alert.LogAnalyticsUrl = LogAnalyticsUrl;
-                        alert.ClientInstance = ClientInstance;
+                        alert.Resource = ResourceName;
                     }
                     else
                     {
@@ -67,6 +67,7 @@ namespace AzureAlertHubFunctions.Services
                         }
                     }
 
+                    log.LogInformation("Update Alerts table: " + Newtonsoft.Json.JsonConvert.SerializeObject(alert));
                     InsertUpdateAlert(alert);
 
                     if (!String.IsNullOrEmpty(alert.IncidentId))
