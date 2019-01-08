@@ -35,21 +35,23 @@ namespace AzureAlertHubFunctions.Services
 
                 string LogAnalyticsUrl = "";
                 if (obj["data"]["LinkToSearchResults"] != null) LogAnalyticsUrl = obj["data"]["LinkToSearchResults"].ToString();
-                string ResourceName = GetResourceName(AlertRuleName, obj, log);
-                string ClientInstance = GetClientInstance(AlertRuleName, ResourceName, payload, log);
+                string ResourceName = GetResourceName(AlertRuleName, payload, obj, log);
+                string ClientInstance = GetClientInstance(AlertRuleName, ResourceName, payload, obj, log);
+                string PartitionKey = ResourceName + " - " + ClientInstance;
 
                 // Add computer to AlertRuleName 
-                if (!String.IsNullOrEmpty(ClientInstance) && !String.IsNullOrEmpty(AlertRuleName))
+                if (!String.IsNullOrEmpty(PartitionKey) && !String.IsNullOrEmpty(AlertRuleName))
                 {
-                    alert = RetrieveAlert(ClientInstance, AlertRuleName);
+                    alert = RetrieveAlert(PartitionKey, AlertRuleName);
                     if (alert == null)
                     {
-                        alert = new AlertEntity(ClientInstance, AlertRuleName);
+                        alert = new AlertEntity(PartitionKey, AlertRuleName);
                         alert.Payload = payload;
                         alert.SearchIntervalStartTimeUtc = DateTime.Parse(obj["data"]["SearchIntervalStartTimeUtc"].ToString());
                         alert.SearchIntervalEndTimeUtc = DateTime.Parse(obj["data"]["SearchIntervalEndtimeUtc"].ToString());
                         alert.LogAnalyticsUrl = LogAnalyticsUrl;
                         alert.Resource = ResourceName;
+                        alert.ClientInstance = ClientInstance;
                     }
                     else
                     {
@@ -87,13 +89,24 @@ namespace AzureAlertHubFunctions.Services
             return alert;
         }
 
-        public string GetResourceName(string alertName, Newtonsoft.Json.Linq.JObject payload, ILogger log)
+        public string GetResourceName(string alertName, string payload, Newtonsoft.Json.Linq.JObject payloadObj, ILogger log)
         {
             string resourceName = "";
 
             try
             {
-                resourceName = payload["data"]["SearchResult"]["tables"][0]["rows"][0][1].ToString();
+                int ResourceIndex = 1;
+
+                for (int p = 0; p < ((JArray)payloadObj["data"]["SearchResult"]["tables"][0]["columns"]).Count; p++)
+                {
+                    if (payloadObj["data"]["SearchResult"]["tables"][0]["columns"][p]["name"].ToString() == "Computer")
+                    {
+                        ResourceIndex = p;
+                        break;
+                    }
+                }
+
+                resourceName = payloadObj["data"]["SearchResult"]["tables"][0]["rows"][0][ResourceIndex].ToString();
             }
             catch (Exception ex)
             {
@@ -103,25 +116,45 @@ namespace AzureAlertHubFunctions.Services
             return resourceName;
         }
 
-        public string GetClientInstance(string alertName, string resourceName, string payload, ILogger log)
+        public string GetClientInstance(string alertName, string resourceName, string payload, Newtonsoft.Json.Linq.JObject payloadObj, ILogger log)
         {
-            string clientInstance = resourceName;
+            string resourceHostName = resourceName;
+            string clientInstance = "";
 
             if (resourceName.Contains("."))
             {
-                resourceName = resourceName.Substring(0, resourceName.IndexOf('.') - 1);
+                resourceHostName = resourceName.Substring(0, resourceName.IndexOf('.') - 1);
             }
 
             // Define a regular expression for repeated words.
-            Regex rx = new Regex($@"({resourceName}\\)\w+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            Regex rx = new Regex($@"({resourceHostName}\\)\w+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
             // Find matches.
             MatchCollection matches = rx.Matches(payload);
 
-            // Report on each match.
-            foreach (Match match in matches)
+            if (matches.Count > 0)
             {
-                clientInstance = match.Value;
+                // Report on each match.
+                foreach (Match match in matches)
+                {
+                    clientInstance = match.Value;
+                }
+            }
+            else
+            {
+                // Go through columns if an Instance exists, and if so use it
+                int InstanceIndex = 1;
+
+                for (int p = 0; p < ((JArray)payloadObj["data"]["SearchResult"]["tables"][0]["columns"]).Count; p++)
+                {
+                    if (payloadObj["data"]["SearchResult"]["tables"][0]["columns"][p]["name"].ToString() == "InstanceName")
+                    {
+                        InstanceIndex = p;
+                        break;
+                    }
+                }
+
+                clientInstance = payloadObj["data"]["SearchResult"]["tables"][0]["rows"][0][InstanceIndex].ToString();
             }
 
             return clientInstance.Replace("\\", "-");

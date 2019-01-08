@@ -14,7 +14,7 @@ namespace AzureAlertHubFunctions.Interfaces
         void InsertUpdateAlert(AlertEntity alert);
         void DeleteAlert(AlertEntity alert);
         void DeleteAlertIncident(AlertIncidentEntity alert);
-        string GetResourceName(string alertName, Newtonsoft.Json.Linq.JObject payload, ILogger log);
-        string GetClientInstance(string alertName, string resourceName, string payload, ILogger log);
+        string GetResourceName(string alertName, string payload, Newtonsoft.Json.Linq.JObject payloadObj, ILogger log);
+        string GetClientInstance(string alertName, string resourceName, string payload, Newtonsoft.Json.Linq.JObject payloadObj, ILogger log);
     }
 }
