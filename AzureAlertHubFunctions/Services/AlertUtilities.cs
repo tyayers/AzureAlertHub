@@ -35,53 +35,58 @@ namespace AzureAlertHubFunctions.Services
 
                 string LogAnalyticsUrl = "";
                 if (obj["data"]["LinkToSearchResults"] != null) LogAnalyticsUrl = obj["data"]["LinkToSearchResults"].ToString();
-                string ResourceName = GetResourceName(AlertRuleName, payload, obj, log);
-                string ClientInstance = GetClientInstance(AlertRuleName, ResourceName, payload, obj, log);
-                string PartitionKey = ResourceName + " - " + ClientInstance;
+                AlertResult[] alertResults = GetAlertResults(AlertRuleName, payload, obj, log);
 
-                // Add computer to AlertRuleName 
-                if (!String.IsNullOrEmpty(PartitionKey) && !String.IsNullOrEmpty(AlertRuleName))
+                foreach (AlertResult result in alertResults)
                 {
-                    alert = RetrieveAlert(PartitionKey, AlertRuleName);
-                    if (alert == null)
-                    {
-                        alert = new AlertEntity(PartitionKey, AlertRuleName);
-                        alert.Payload = payload;
-                        alert.SearchIntervalStartTimeUtc = DateTime.Parse(obj["data"]["SearchIntervalStartTimeUtc"].ToString());
-                        alert.SearchIntervalEndTimeUtc = DateTime.Parse(obj["data"]["SearchIntervalEndtimeUtc"].ToString());
-                        alert.LogAnalyticsUrl = LogAnalyticsUrl;
-                        alert.Resource = ResourceName;
-                        alert.ClientInstance = ClientInstance;
-                    }
-                    else
-                    {
-                        alert.LastOccuranceTimestamp = DateTime.Now;
-                        alert.Counter++;
-                    }
+                    //string ResourceName = GetResourceName(AlertRuleName, payload, obj, log);
+                    //string ClientInstance = GetClientInstance(AlertRuleName, ResourceName, payload, obj, log);
+                    //string PartitionKey = ResourceName + " - " + ClientInstance;
 
-                    if (String.IsNullOrEmpty(alert.IncidentId))
+                    // Add computer to AlertRuleName 
+                    if (!String.IsNullOrEmpty(result.PartitionKey) && !String.IsNullOrEmpty(AlertRuleName))
                     {
-                        // We don't yet have an IncidentId for this alert
-                        ServiceManagementResponseDto incident = serviceManagemement.CreateIncident(alert, log);
-                        if (incident != null && incident.result != null)
+                        alert = RetrieveAlert(result.PartitionKey, AlertRuleName);
+                        if (alert == null)
                         {
-                            alert.IncidentId = incident.result.number;
-                            alert.IncidentUrl = incident.result.url;
+                            alert = new AlertEntity(result.PartitionKey, AlertRuleName);
+                            alert.Payload = payload;
+                            alert.SearchIntervalStartTimeUtc = DateTime.Parse(obj["data"]["SearchIntervalStartTimeUtc"].ToString());
+                            alert.SearchIntervalEndTimeUtc = DateTime.Parse(obj["data"]["SearchIntervalEndtimeUtc"].ToString());
+                            alert.LogAnalyticsUrl = LogAnalyticsUrl;
+                            alert.Resource = result.ResourceName;
+                            alert.ClientInstance = result.InstanceName;
                         }
-                    }
+                        else
+                        {
+                            alert.LastOccuranceTimestamp = DateTime.Now;
+                            alert.Counter++;
+                        }
 
-                    log.LogInformation("Update Alerts table: " + Newtonsoft.Json.JsonConvert.SerializeObject(alert));
-                    InsertUpdateAlert(alert);
+                        if (String.IsNullOrEmpty(alert.IncidentId))
+                        {
+                            // We don't yet have an IncidentId for this alert
+                            ServiceManagementResponseDto incident = serviceManagemement.CreateIncident(alert, log);
+                            if (incident != null && incident.result != null)
+                            {
+                                alert.IncidentId = incident.result.number;
+                                alert.IncidentUrl = incident.result.url;
+                            }
+                        }
 
-                    if (!String.IsNullOrEmpty(alert.IncidentId))
-                    {
-                        // Insert record of incident ID
-                        AlertIncidentEntity incidentEntity = new AlertIncidentEntity("SNOW", alert.IncidentId);
-                        incidentEntity.AlertPartitionId = alert.PartitionKey;
-                        incidentEntity.AlertRowId = alert.RowKey;
-                        incidentEntity.IncidentUrl = alert.IncidentUrl;
+                        log.LogInformation("Update Alerts table: " + Newtonsoft.Json.JsonConvert.SerializeObject(alert));
+                        InsertUpdateAlert(alert);
 
-                        InsertUpdateAlertIncident(incidentEntity);
+                        if (!String.IsNullOrEmpty(alert.IncidentId))
+                        {
+                            // Insert record of incident ID
+                            AlertIncidentEntity incidentEntity = new AlertIncidentEntity("SNOW", alert.IncidentId);
+                            incidentEntity.AlertPartitionId = alert.PartitionKey;
+                            incidentEntity.AlertRowId = alert.RowKey;
+                            incidentEntity.IncidentUrl = alert.IncidentUrl;
+
+                            InsertUpdateAlertIncident(incidentEntity);
+                        }
                     }
                 }
             }
@@ -89,75 +94,68 @@ namespace AzureAlertHubFunctions.Services
             return alert;
         }
 
-        public string GetResourceName(string alertName, string payload, Newtonsoft.Json.Linq.JObject payloadObj, ILogger log)
+        protected AlertResult[] GetAlertResults(string alertName, string payload, Newtonsoft.Json.Linq.JObject payloadObj, ILogger log)
         {
-            string resourceName = "";
+            List<AlertResult> results = new List<AlertResult>();
 
-            try
+            foreach (JObject table in payloadObj["data"]["SearchResult"]["tables"])
             {
-                int ResourceIndex = 1;
+                int resourceIndex = GetColumnIndex(alertName, "Computer", table, log);
+                int instanceIndex = GetColumnIndex(alertName, "InstanceName", table, log);
 
-                for (int p = 0; p < ((JArray)payloadObj["data"]["SearchResult"]["tables"][0]["columns"]).Count; p++)
+                if (resourceIndex != -1 && instanceIndex != -1)
                 {
-                    if (payloadObj["data"]["SearchResult"]["tables"][0]["columns"][p]["name"].ToString() == "Computer")
+                    foreach (JArray row in table["rows"])
                     {
-                        ResourceIndex = p;
-                        break;
+                        AlertResult result = new AlertResult() { ResourceName = row[resourceIndex].ToString(), InstanceName = row[instanceIndex].ToString() };
+                        result.PartitionKey = result.ResourceName + " - " + result.InstanceName;
+                        if (result.InstanceName.Contains(":")) result.Type = AlertType.DISK;
+                        results.Add(result);
+
+                        string resourceHostName = result.ResourceName;
+                        if (resourceHostName.Contains("."))
+                        {
+                            resourceHostName = resourceHostName.Substring(0, resourceHostName.IndexOf('.') - 1);
+                        }
+
+                        // Define a regular expression for repeated words.
+                        Regex rx = new Regex($@"({resourceHostName}\\)\w+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+                        // Find matches.
+                        MatchCollection matches = rx.Matches(payload);
+
+                        if (matches.Count > 0)
+                        {
+                            // Report on each match.
+                            foreach (Match match in matches)
+                            {
+                                AlertResult dbResult = new AlertResult() { ResourceName = result.ResourceName, InstanceName = match.Value.Replace("\\", "-") };
+                                dbResult.PartitionKey = dbResult.ResourceName + " - " + dbResult.InstanceName;
+                                dbResult.Type = AlertType.DB;
+                                results.Add(dbResult);
+                            }
+                        }
                     }
                 }
-
-                resourceName = payloadObj["data"]["SearchResult"]["tables"][0]["rows"][0][ResourceIndex].ToString();
-            }
-            catch (Exception ex)
-            {
-                log.LogError($"Error retrieving resource name for alert {alertName} - {ex.ToString()}");                
             }
 
-            return resourceName;
+            return results.ToArray();
         }
 
-        public string GetClientInstance(string alertName, string resourceName, string payload, Newtonsoft.Json.Linq.JObject payloadObj, ILogger log)
+        protected int GetColumnIndex(string alertName, string columnName, Newtonsoft.Json.Linq.JObject tableObject, ILogger log)
         {
-            string resourceHostName = resourceName;
-            string clientInstance = "";
+            int ResourceIndex = -1;
 
-            if (resourceName.Contains("."))
+            for (int p = 0; p < ((JArray)tableObject["columns"]).Count; p++)
             {
-                resourceHostName = resourceName.Substring(0, resourceName.IndexOf('.') - 1);
-            }
-
-            // Define a regular expression for repeated words.
-            Regex rx = new Regex($@"({resourceHostName}\\)\w+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-            // Find matches.
-            MatchCollection matches = rx.Matches(payload);
-
-            if (matches.Count > 0)
-            {
-                // Report on each match.
-                foreach (Match match in matches)
+                if (tableObject["columns"][p]["name"].ToString() == columnName)
                 {
-                    clientInstance = match.Value;
+                    ResourceIndex = p;
+                    break;
                 }
             }
-            else
-            {
-                // Go through columns if an Instance exists, and if so use it
-                int InstanceIndex = 1;
 
-                for (int p = 0; p < ((JArray)payloadObj["data"]["SearchResult"]["tables"][0]["columns"]).Count; p++)
-                {
-                    if (payloadObj["data"]["SearchResult"]["tables"][0]["columns"][p]["name"].ToString() == "InstanceName")
-                    {
-                        InstanceIndex = p;
-                        break;
-                    }
-                }
-
-                clientInstance = payloadObj["data"]["SearchResult"]["tables"][0]["rows"][0][InstanceIndex].ToString();
-            }
-
-            return clientInstance.Replace("\\", "-");
+            return ResourceIndex;
         }
 
         public AlertEntity RetrieveAlert(string partitionKey, string rowKey)
