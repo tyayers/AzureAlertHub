@@ -30,8 +30,8 @@ namespace AzureAlertHubFunctions.Services
             Newtonsoft.Json.Linq.JObject obj = Newtonsoft.Json.Linq.JObject.Parse(payload);
             if (obj != null && obj["data"] != null)
             {
-                string SubscriptionId = obj["data"]["SubscriptionId"].ToString();
-                string AlertRuleName = obj["data"]["AlertRuleName"].ToString();
+                string AlertRuleName = "NO-NAME-FOUND";
+                if (obj["data"]["AlertRuleName"] != null) obj["data"]["AlertRuleName"].ToString();
                 string LogAnalyticsUrl = "";
                 if (obj["data"]["LinkToSearchResults"] != null) LogAnalyticsUrl = obj["data"]["LinkToSearchResults"].ToString();
                 string ResourceName = GetResourceName(AlertRuleName, obj, log);
