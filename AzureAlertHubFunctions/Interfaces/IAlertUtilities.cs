@@ -8,7 +8,7 @@ namespace AzureAlertHubFunctions.Interfaces
 {
     public interface IAlertUtilities
     {
-        AlertEntity LoadOrCreateAlert(string payload, ILogger log);
+        AlertEntity[] LoadOrCreateAlerts(string payload, ILogger log);
         AlertEntity RetrieveAlert(string partitionKey, string rowKey);
         AlertIncidentEntity RetrieveAlertEntity(string partitionKey, string rowKey);
         void InsertUpdateAlert(AlertEntity alert);

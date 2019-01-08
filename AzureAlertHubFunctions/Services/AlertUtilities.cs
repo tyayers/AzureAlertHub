@@ -23,9 +23,9 @@ namespace AzureAlertHubFunctions.Services
         /// </summary>
         /// <param name="payload">The JSON payload from Azure Alerting</param>
         /// <returns>AlertParameters object with SubscriptionId and AlertRuleName</returns>
-        public AlertEntity LoadOrCreateAlert(string payload, ILogger log)
+        public AlertEntity[] LoadOrCreateAlerts(string payload, ILogger log)
         {
-            AlertEntity alert = null;
+            List<AlertEntity> results = new List<AlertEntity>();
 
             Newtonsoft.Json.Linq.JObject obj = Newtonsoft.Json.Linq.JObject.Parse(payload);
             if (obj != null && obj["data"] != null)
@@ -39,14 +39,10 @@ namespace AzureAlertHubFunctions.Services
 
                 foreach (AlertResult result in alertResults)
                 {
-                    //string ResourceName = GetResourceName(AlertRuleName, payload, obj, log);
-                    //string ClientInstance = GetClientInstance(AlertRuleName, ResourceName, payload, obj, log);
-                    //string PartitionKey = ResourceName + " - " + ClientInstance;
-
                     // Add computer to AlertRuleName 
                     if (!String.IsNullOrEmpty(result.PartitionKey) && !String.IsNullOrEmpty(AlertRuleName))
                     {
-                        alert = RetrieveAlert(result.PartitionKey, AlertRuleName);
+                        AlertEntity alert = RetrieveAlert(result.PartitionKey, AlertRuleName);
                         if (alert == null)
                         {
                             alert = new AlertEntity(result.PartitionKey, AlertRuleName);
@@ -62,6 +58,8 @@ namespace AzureAlertHubFunctions.Services
                             alert.LastOccuranceTimestamp = DateTime.Now;
                             alert.Counter++;
                         }
+
+                        results.Add(alert);
 
                         if (String.IsNullOrEmpty(alert.IncidentId))
                         {
@@ -91,7 +89,7 @@ namespace AzureAlertHubFunctions.Services
                 }
             }
 
-            return alert;
+            return results.ToArray();
         }
 
         protected AlertResult[] GetAlertResults(string alertName, string payload, Newtonsoft.Json.Linq.JObject payloadObj, ILogger log)
@@ -103,22 +101,26 @@ namespace AzureAlertHubFunctions.Services
                 int resourceIndex = GetColumnIndex(alertName, "Computer", table, log);
                 int instanceIndex = GetColumnIndex(alertName, "InstanceName", table, log);
 
-                if (resourceIndex != -1 && instanceIndex != -1)
+                if (resourceIndex != -1)
                 {
                     foreach (JArray row in table["rows"])
                     {
-                        AlertResult result = new AlertResult() { ResourceName = row[resourceIndex].ToString(), InstanceName = row[instanceIndex].ToString() };
-                        result.PartitionKey = result.ResourceName + " - " + result.InstanceName;
-                        if (result.InstanceName.Contains(":")) result.Type = AlertType.DISK;
-                        results.Add(result);
+                        AlertResult result = new AlertResult() { ResourceName = row[resourceIndex].ToString(), PartitionKey = row[resourceIndex].ToString() };
 
+                        if (instanceIndex != -1 && row[instanceIndex].ToString() != "")
+                        {
+                            result.InstanceName = row[instanceIndex].ToString();
+                            result.PartitionKey = result.ResourceName + " - " + result.InstanceName;
+                        }
+
+                        // Get host name without domain
                         string resourceHostName = result.ResourceName;
                         if (resourceHostName.Contains("."))
                         {
                             resourceHostName = resourceHostName.Substring(0, resourceHostName.IndexOf('.') - 1);
                         }
 
-                        // Define a regular expression for repeated words.
+                        // Check if body contains a database, then report incident
                         Regex rx = new Regex($@"({resourceHostName}\\)\w+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
                         // Find matches.
@@ -126,7 +128,7 @@ namespace AzureAlertHubFunctions.Services
 
                         if (matches.Count > 0)
                         {
-                            // Report on each match.
+                            // If we have a match with databases
                             foreach (Match match in matches)
                             {
                                 AlertResult dbResult = new AlertResult() { ResourceName = result.ResourceName, InstanceName = match.Value.Replace("\\", "-") };
@@ -134,6 +136,12 @@ namespace AzureAlertHubFunctions.Services
                                 dbResult.Type = AlertType.DB;
                                 results.Add(dbResult);
                             }
+                        }
+                        else
+                        {
+                            // If no databases, then add original incident (either CPU, DISK, etc..)
+                            if (result.InstanceName.Contains(":")) result.Type = AlertType.DISK;
+                            results.Add(result);
                         }
                     }
                 }

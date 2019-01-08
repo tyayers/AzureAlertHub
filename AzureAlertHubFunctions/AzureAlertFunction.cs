@@ -45,8 +45,8 @@ namespace AzureAlertHubFunctions
             log.LogInformation(requestBody);
 
             // First extract data from alert payload
-            AlertEntity alert = alertUtils.LoadOrCreateAlert(requestBody, log);
-            if (alert == null)
+            AlertEntity[] alerts = alertUtils.LoadOrCreateAlerts(requestBody, log);
+            if (alerts == null || alerts.Length == 0)
             {
                 // We do not have normal parameters, error
                 result = "Invalid alert data received, no ResourceName or AlertId found, no further action possible.";
