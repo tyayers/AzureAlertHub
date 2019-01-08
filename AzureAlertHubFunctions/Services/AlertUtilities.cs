@@ -31,7 +31,8 @@ namespace AzureAlertHubFunctions.Services
             if (obj != null && obj["data"] != null)
             {
                 string AlertRuleName = "NO-NAME-FOUND";
-                if (obj["data"]["AlertRuleName"] != null) obj["data"]["AlertRuleName"].ToString();
+                if (obj["data"]["AlertRuleName"] != null) AlertRuleName = obj["data"]["AlertRuleName"].ToString();
+
                 string LogAnalyticsUrl = "";
                 if (obj["data"]["LinkToSearchResults"] != null) LogAnalyticsUrl = obj["data"]["LinkToSearchResults"].ToString();
                 string ResourceName = GetResourceName(AlertRuleName, obj, log);
