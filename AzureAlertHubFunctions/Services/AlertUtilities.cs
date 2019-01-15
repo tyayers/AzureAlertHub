@@ -52,6 +52,8 @@ namespace AzureAlertHubFunctions.Services
                             alert.LogAnalyticsUrl = LogAnalyticsUrl;
                             alert.Resource = result.ResourceName;
                             alert.ClientInstance = result.InstanceName;
+                            alert.Description = result.Description;
+                            alert.Type = result.Type.ToString();
                         }
                         else
                         {
@@ -100,6 +102,7 @@ namespace AzureAlertHubFunctions.Services
             {
                 int resourceIndex = GetColumnIndex(alertName, "Computer", table, log);
                 int instanceIndex = GetColumnIndex(alertName, "InstanceName", table, log);
+                int renderedDescriptionIndex = GetColumnIndex(alertName, "RenderedDescription", table, log);
 
                 if (resourceIndex != -1)
                 {
@@ -107,10 +110,17 @@ namespace AzureAlertHubFunctions.Services
                     {
                         AlertResult result = new AlertResult() { ResourceName = row[resourceIndex].ToString(), PartitionKey = row[resourceIndex].ToString() };
 
-                        if (instanceIndex != -1 && row[instanceIndex].ToString() != "")
+                        // Set instance info, if available
+                        if (instanceIndex != -1 && !String.IsNullOrEmpty(row[instanceIndex].ToString()))
                         {
                             result.InstanceName = row[instanceIndex].ToString();
                             result.PartitionKey = result.ResourceName + " - " + result.InstanceName;
+                        }
+
+                        // Set rendered description info, if available
+                        if (renderedDescriptionIndex != -1 && !String.IsNullOrEmpty(row[renderedDescriptionIndex].ToString()))
+                        {
+                            result.Description = row[renderedDescriptionIndex].ToString();
                         }
 
                         // Get host name without domain
@@ -120,8 +130,10 @@ namespace AzureAlertHubFunctions.Services
                             resourceHostName = resourceHostName.Substring(0, resourceHostName.IndexOf('.') - 1);
                         }
 
+                        string regex = System.Environment.GetEnvironmentVariable("AlertRegularExpression");
+                        regex = regex.Replace("{HOSTNAME}", resourceHostName);
                         // Check if body contains a database, then report incident
-                        Regex rx = new Regex($@"({resourceHostName}\\)\w+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                        Regex rx = new Regex(@regex, RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
                         // Find matches.
                         MatchCollection matches = rx.Matches(payload);
@@ -131,7 +143,7 @@ namespace AzureAlertHubFunctions.Services
                             // If we have a match with databases
                             foreach (Match match in matches)
                             {
-                                AlertResult dbResult = new AlertResult() { ResourceName = result.ResourceName, InstanceName = match.Value.Replace("\\", "-") };
+                                AlertResult dbResult = new AlertResult() { ResourceName = result.ResourceName, InstanceName = match.Value.Replace($"{resourceHostName}\\", "") };
                                 dbResult.PartitionKey = dbResult.ResourceName + " - " + dbResult.InstanceName;
                                 dbResult.Type = AlertType.DB;
                                 results.Add(dbResult);

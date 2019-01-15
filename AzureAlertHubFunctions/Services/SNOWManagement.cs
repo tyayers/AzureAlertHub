@@ -35,7 +35,7 @@ namespace AzureAlertHubFunctions.Services
                     business_service = System.Environment.GetEnvironmentVariable("ServiceManagementBusinessService"),
                     it_service = System.Environment.GetEnvironmentVariable("ServiceManagementITService"),
                     contact_type = System.Environment.GetEnvironmentVariable("ServiceManagementContactType"),
-                    short_description = alert.AlertName + "(" + alert.Resource + ") " + alert.ClientInstance,
+                    short_description = alert.AlertName + "(" + alert.Resource + ") " + alert.ClientInstance + " " + alert.Description,
                     description = alert.LogAnalyticsUrl,
                     assignment_group = System.Environment.GetEnvironmentVariable("ServiceManagementAssignmentGroup"),
                     group_family = System.Environment.GetEnvironmentVariable("ServiceManagementGroupFamily"),

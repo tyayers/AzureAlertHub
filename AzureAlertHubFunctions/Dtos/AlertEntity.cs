@@ -17,7 +17,7 @@ namespace AzureAlertHubFunctions.Dtos
         public string SubscriptionId { get; set; }
         public string AlertName { get; set; }
         public string Resource { get; set; }
-        public string ClientInstance { get; set; }
+        public string ClientInstance { get; set; } = "";
         public DateTime? SearchIntervalStartTimeUtc { get; set; }
         public DateTime? SearchIntervalEndTimeUtc { get; set; }
         public string Status { get; set; } = "Open";
@@ -28,6 +28,8 @@ namespace AzureAlertHubFunctions.Dtos
         public string EventId { get; set; } = "";
         public DateTime CreationTimestamp { get; set; } = DateTime.Now;
         public DateTime LastOccuranceTimestamp { get; set; } = DateTime.Now;
+        public string Description { get; set; } = "";
+        public string Type { get; set; } = "OTHER";
         public string Payload { get; set; }
     }
 }

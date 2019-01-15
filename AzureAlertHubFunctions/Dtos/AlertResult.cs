@@ -15,6 +15,7 @@ namespace AzureAlertHubFunctions.Dtos
         public string ResourceName { get; set; }
         public string InstanceName { get; set; } = "";
         public string PartitionKey { get; set; }
+        public string Description { get; set; } = "";
         public AlertType Type { get; set; } = AlertType.OTHER;
     }
 }
