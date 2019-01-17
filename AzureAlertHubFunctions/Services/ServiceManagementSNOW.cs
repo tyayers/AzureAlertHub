@@ -9,7 +9,7 @@ using System.Text;
 
 namespace AzureAlertHubFunctions.Services
 {
-    public class SNOWManagement : IServiceManagement
+    public class ServiceManagementSNOW : IServiceManagement
     {
         public ServiceManagementResponseDto CreateIncident(AlertEntity alert, ILogger log)
         {

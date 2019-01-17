@@ -24,11 +24,11 @@ namespace AzureAlertHubFunctions
             string ServiceManagementHost = System.Environment.GetEnvironmentVariable("ServiceManagementType");
             if (ServiceManagementHost.ToUpper() == "SNOW")
             {
-                alertUtils = new AlertUtilities(new SNOWManagement());
+                alertUtils = new AlertUtilities(new ServiceManagementSNOW());
             }
             else
             {
-                alertUtils = new AlertUtilities(new TESTManagement());
+                alertUtils = new AlertUtilities(new ServiceManagementTEST());
             }
         }
 

@@ -7,7 +7,7 @@ using System.Text;
 
 namespace AzureAlertHubFunctions.Services
 {
-    public class TESTManagement : IServiceManagement
+    public class ServiceManagementTEST : IServiceManagement
     {
         public ServiceManagementResponseDto CreateIncident(AlertEntity alert, ILogger log)
         {

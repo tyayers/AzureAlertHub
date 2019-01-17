@@ -14,9 +14,27 @@ namespace AzureAlertHubFunctions.Services
     public class AlertUtilities : IAlertUtilities
     {
         protected IServiceManagement serviceManagemement;
+
+        protected Dictionary<string, ICustomLogHandler> customLogHandlers = new Dictionary<string, ICustomLogHandler>();
+
         public AlertUtilities(IServiceManagement serviceManagemementAdapter)
         {
             serviceManagemement = serviceManagemementAdapter;
+
+            string dbRegex = Environment.GetEnvironmentVariable("CustomAlertRegularExpression_DB");
+            string diskRegex = Environment.GetEnvironmentVariable("CustomAlertRegularExpression_DISK");
+
+            if (!String.IsNullOrEmpty(dbRegex))
+            {
+                // We have a DB handler
+                customLogHandlers.Add("DB", new CustomLogServiceDB(dbRegex, "DB"));
+            }
+
+            if (!String.IsNullOrEmpty(diskRegex))
+            {
+                // We have a DISK handler
+                customLogHandlers.Add("DISK", new CustomLogServiceDISK(diskRegex, "DISK"));
+            }
         }
         /// <summary>
         /// The GetAlertParameters method returns the SubscriptionId and AlertRuleName if they are available in the payload
@@ -123,36 +141,23 @@ namespace AzureAlertHubFunctions.Services
                             result.Description = row[renderedDescriptionIndex].ToString();
                         }
 
-                        // Get host name without domain
-                        string resourceHostName = result.ResourceName;
-                        if (resourceHostName.Contains("."))
+                        bool handled = false;
+                        List<AlertResult> localResults = new List<AlertResult>();
+                        foreach (string customHandlerKey in customLogHandlers.Keys)
                         {
-                            resourceHostName = resourceHostName.Substring(0, resourceHostName.IndexOf('.') - 1);
+                            CustomLogHanderResultDto logHandlerResult = customLogHandlers[customHandlerKey].CheckCustomLog(result.ResourceName, result.InstanceName, result.Description, table, row, Newtonsoft.Json.JsonConvert.SerializeObject(row), log);
+                            if (logHandlerResult.Handled) handled = true;
+                            localResults.AddRange(logHandlerResult.Results);
                         }
 
-                        string regex = System.Environment.GetEnvironmentVariable("AlertRegularExpression");
-                        regex = regex.Replace("{HOSTNAME}", resourceHostName);
-                        // Check if body contains a database, then report incident
-                        Regex rx = new Regex(@regex, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-                        // Find matches.
-                        MatchCollection matches = rx.Matches(payload);
-
-                        if (matches.Count > 0)
+                        if (handled)
                         {
-                            // If we have a match with databases
-                            foreach (Match match in matches)
-                            {
-                                AlertResult dbResult = new AlertResult() { ResourceName = result.ResourceName, InstanceName = match.Value.Replace($"{resourceHostName}\\", "") };
-                                dbResult.PartitionKey = dbResult.ResourceName + " - " + dbResult.InstanceName;
-                                dbResult.Type = AlertType.DB;
-                                results.Add(dbResult);
-                            }
+                            // Custom handlers matched, add them
+                            results.AddRange(localResults);
                         }
                         else
                         {
-                            // If no databases, then add original incident (either CPU, DISK, etc..)
-                            if (result.InstanceName.Contains(":")) result.Type = AlertType.DISK;
+                            // No custom handler results, just add main alert
                             results.Add(result);
                         }
                     }
