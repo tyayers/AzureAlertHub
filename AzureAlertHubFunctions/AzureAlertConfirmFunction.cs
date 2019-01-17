@@ -47,16 +47,21 @@ namespace AzureAlertHubFunctions
 
                 log.LogInformation($"Preparing to confirm SNOW incident {IncidentId}");
 
-                AlertIncidentEntity alertIncident = alertUtils.RetrieveAlertEntity("SNOW", IncidentId);
+                AlertIncidentEntity alertIncident = alertUtils.GetAlertIncident("SNOW", IncidentId);
                 if (alertIncident != null)
                 {
-                    AlertEntity alert = alertUtils.RetrieveAlert(alertIncident.AlertPartitionId, alertIncident.AlertRowId);
+                    AlertEntity alert = alertUtils.GetAlert(alertIncident.AlertPartitionId, alertIncident.AlertRowId);
                     alertUtils.DeleteAlert(alert);
                     alertUtils.DeleteAlertIncident(alertIncident);
                 }
             }
             else
-                log.LogError("Missing parameter incidentid to know which alert to close!");
+            {
+                log.LogInformation("NO incidentid was passed, so checking all open incidents..");
+                alertUtils.CheckIncidentsStatus(log);
+            }
+
+            log.LogInformation("Finished checking incident status");
 
             return (ActionResult)new OkObjectResult(result);
         }

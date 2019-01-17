@@ -9,5 +9,9 @@ namespace AzureAlertHubFunctions.Interfaces
     public interface IServiceManagement
     {
         ServiceManagementResponseDto CreateIncident(Dtos.AlertEntity alert, ILogger log);
+
+        ServiceManagementStatusResponseDto GetIncidentStatus(Dtos.AlertIncidentEntity incident, ILogger log);
+
+        ServiceManagementStatusResponseDto GetIncidentsStatus(List<Dtos.AlertIncidentEntity> incidents, ILogger log);
     }
 }

@@ -9,8 +9,10 @@ namespace AzureAlertHubFunctions.Interfaces
     public interface IAlertUtilities
     {
         AlertEntity[] LoadOrCreateAlerts(string payload, ILogger log);
-        AlertEntity RetrieveAlert(string partitionKey, string rowKey);
-        AlertIncidentEntity RetrieveAlertEntity(string partitionKey, string rowKey);
+        AlertEntity GetAlert(string partitionKey, string rowKey);
+        void CheckIncidentsStatus(ILogger log);
+        AlertIncidentEntity GetAlertIncident(string partitionKey, string rowKey);
+        List<AlertIncidentEntity> GetAllAlertIncidents();
         void InsertUpdateAlert(AlertEntity alert);
         void DeleteAlert(AlertEntity alert);
         void DeleteAlertIncident(AlertIncidentEntity alert);

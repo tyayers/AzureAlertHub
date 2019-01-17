@@ -42,7 +42,7 @@ namespace AzureAlertHubFunctions.Services
                     // Add computer to AlertRuleName 
                     if (!String.IsNullOrEmpty(result.PartitionKey) && !String.IsNullOrEmpty(AlertRuleName))
                     {
-                        AlertEntity alert = RetrieveAlert(result.PartitionKey, AlertRuleName);
+                        AlertEntity alert = GetAlert(result.PartitionKey, AlertRuleName);
                         if (alert == null)
                         {
                             alert = new AlertEntity(result.PartitionKey, AlertRuleName);
@@ -178,7 +178,34 @@ namespace AzureAlertHubFunctions.Services
             return ResourceIndex;
         }
 
-        public AlertEntity RetrieveAlert(string partitionKey, string rowKey)
+        public void CheckIncidentsStatus(ILogger log)
+        {
+            log.LogInformation("Starting incident status check with service management system...");
+            List<AlertIncidentEntity> alertIncidents = GetAllAlertIncidents();
+
+            log.LogInformation($"Found {alertIncidents.Count} open incidents, checking status if necessary..");
+
+            ServiceManagementStatusResponseDto incidentsStatus = serviceManagemement.GetIncidentsStatus(alertIncidents, log);
+
+            foreach (string incidentId in incidentsStatus.result.Keys)
+            {
+                ServiceManagementStatus status = incidentsStatus.result[incidentId];
+                log.LogInformation($"Got new service management status for incident {incidentId}: {status.state}");
+
+                if (status.state == "Resolved" || status.state == "Closed")
+                {
+                    AlertIncidentEntity alertIncident = GetAlertIncident("SNOW", incidentId);
+                    if (alertIncident != null)
+                    {
+                        AlertEntity alert = GetAlert(alertIncident.AlertPartitionId, alertIncident.AlertRowId);
+                        DeleteAlert(alert);
+                        DeleteAlertIncident(alertIncident);
+                    }
+                }
+            }
+        }
+
+        public AlertEntity GetAlert(string partitionKey, string rowKey)
         {
             // Retrieve the storage account from the connection string.
             CloudStorageAccount storageAccount = CloudStorageAccount.Parse(System.Environment.GetEnvironmentVariable("StorageConnectionString"));
@@ -196,7 +223,7 @@ namespace AzureAlertHubFunctions.Services
             return (AlertEntity) tableResult.Result;
         }
 
-        public AlertIncidentEntity RetrieveAlertEntity(string partitionKey, string rowKey)
+        public AlertIncidentEntity GetAlertIncident(string partitionKey, string rowKey)
         {
             // Retrieve the storage account from the connection string.
             CloudStorageAccount storageAccount = CloudStorageAccount.Parse(System.Environment.GetEnvironmentVariable("StorageConnectionString"));
@@ -212,6 +239,30 @@ namespace AzureAlertHubFunctions.Services
             TableResult tableResult = table.ExecuteAsync(tableOperation).Result;
 
             return (AlertIncidentEntity)tableResult.Result;
+        }
+
+        public List<AlertIncidentEntity> GetAllAlertIncidents()
+        {
+            // Retrieve the storage account from the connection string.
+            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(System.Environment.GetEnvironmentVariable("StorageConnectionString"));
+
+            // Create the table client.
+            CloudTableClient tableClient = storageAccount.CreateCloudTableClient();
+
+            // Create the CloudTable object that represents the "people" table.
+            CloudTable table = tableClient.GetTableReference("AlertIncidents");
+            table.CreateIfNotExistsAsync().Wait();
+
+            TableContinuationToken token = null;
+            var entities = new List<AlertIncidentEntity>();
+            do
+            {
+                var queryResult = table.ExecuteQuerySegmentedAsync(new TableQuery<AlertIncidentEntity>(), token).Result;
+                entities.AddRange(queryResult.Results);
+                token = queryResult.ContinuationToken;
+            } while (token != null);
+
+            return entities;
         }
 
         public void InsertUpdateAlert(AlertEntity alert)
