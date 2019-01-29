@@ -35,8 +35,8 @@ namespace AzureAlertHubFunctions.Services
                     business_service = System.Environment.GetEnvironmentVariable("ServiceManagementBusinessService"),
                     it_service = System.Environment.GetEnvironmentVariable("ServiceManagementITService"),
                     contact_type = System.Environment.GetEnvironmentVariable("ServiceManagementContactType"),
-                    short_description = alert.AlertName + "(" + alert.Resource + ") " + alert.ClientInstance + " " + alert.Description,
-                    description = alert.LogAnalyticsUrl,
+                    short_description = alert.AlertName + " " + alert.ClientInstance,
+                    description = alert.Description + " " + alert.LogAnalyticsUrl,
                     assignment_group = System.Environment.GetEnvironmentVariable("ServiceManagementAssignmentGroup"),
                     group_family = System.Environment.GetEnvironmentVariable("ServiceManagementGroupFamily"),
                     location = System.Environment.GetEnvironmentVariable("ServiceManagementLocation"),
@@ -44,6 +44,9 @@ namespace AzureAlertHubFunctions.Services
                     impact = System.Environment.GetEnvironmentVariable("ServiceManagementImpact"),
                     stage = System.Environment.GetEnvironmentVariable("ServiceManagementStage")
                 };
+
+                if (alert.Type == Common.AlertTypes.Disk)
+                    payload.short_description = alert.AlertName + " (" + alert.Resource + ") " + alert.ClientInstance;
 
                 var content = new StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
                 string snowUrl = System.Environment.GetEnvironmentVariable("ServiceManagementUrl") + "/create_incident";

@@ -27,13 +27,13 @@ namespace AzureAlertHubFunctions.Services
             if (!String.IsNullOrEmpty(dbRegex))
             {
                 // We have a DB handler
-                customLogHandlers.Add("DB", new CustomLogServiceDB(dbRegex, "DB"));
+                customLogHandlers.Add(Common.AlertTypes.DB, new CustomLogServiceDB(dbRegex, Common.AlertTypes.DB));
             }
 
             if (!String.IsNullOrEmpty(diskRegex))
             {
                 // We have a DISK handler
-                customLogHandlers.Add("DISK", new CustomLogServiceDISK(diskRegex, "DISK"));
+                customLogHandlers.Add(Common.AlertTypes.Disk, new CustomLogServiceDISK(diskRegex, Common.AlertTypes.Disk));
             }
         }
         /// <summary>
@@ -183,6 +183,45 @@ namespace AzureAlertHubFunctions.Services
             return ResourceIndex;
         }
 
+        public void CheckAlertsStatus(ILogger log)
+        {
+            log.LogInformation("Starting alert status check with service management system...");
+            List<AlertEntity> alerts = GetAllAlerts();
+
+            log.LogInformation($"Found {alerts.Count} open incidents, checking if incident id exists..");
+
+            foreach (AlertEntity alert in alerts)
+            {
+                if (System.DateTime.Now.Subtract(alert.CreationTimestamp).TotalMinutes > 10)
+                {
+                    if (String.IsNullOrEmpty(alert.IncidentId))
+                    {
+                        // We did not get a valid incident id from the service management system, retry..
+                        ServiceManagementResponseDto incident = serviceManagemement.CreateIncident(alert, log);
+                        if (incident != null && incident.result != null)
+                        {
+                            alert.IncidentId = incident.result.number;
+                            alert.IncidentUrl = incident.result.url;
+
+                            if (!String.IsNullOrEmpty(alert.IncidentId))
+                            {
+                                // Woohoo we have an incident
+                                InsertUpdateAlert(alert);
+
+                                // Insert record of incident ID
+                                AlertIncidentEntity incidentEntity = new AlertIncidentEntity("SNOW", alert.IncidentId);
+                                incidentEntity.AlertPartitionId = alert.PartitionKey;
+                                incidentEntity.AlertRowId = alert.RowKey;
+                                incidentEntity.IncidentUrl = alert.IncidentUrl;
+
+                                InsertUpdateAlertIncident(incidentEntity);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         public void CheckIncidentsStatus(ILogger log)
         {
             log.LogInformation("Starting incident status check with service management system...");
@@ -244,6 +283,30 @@ namespace AzureAlertHubFunctions.Services
             TableResult tableResult = table.ExecuteAsync(tableOperation).Result;
 
             return (AlertIncidentEntity)tableResult.Result;
+        }
+
+        public List<AlertEntity> GetAllAlerts()
+        {
+            // Retrieve the storage account from the connection string.
+            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(System.Environment.GetEnvironmentVariable("StorageConnectionString"));
+
+            // Create the table client.
+            CloudTableClient tableClient = storageAccount.CreateCloudTableClient();
+
+            // Create the CloudTable object that represents the "people" table.
+            CloudTable table = tableClient.GetTableReference("Alerts");
+            table.CreateIfNotExistsAsync().Wait();
+
+            TableContinuationToken token = null;
+            var entities = new List<AlertEntity>();
+            do
+            {
+                var queryResult = table.ExecuteQuerySegmentedAsync(new TableQuery<AlertEntity>(), token).Result;
+                entities.AddRange(queryResult.Results);
+                token = queryResult.ContinuationToken;
+            } while (token != null);
+
+            return entities;
         }
 
         public List<AlertIncidentEntity> GetAllAlertIncidents()
