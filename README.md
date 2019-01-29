@@ -23,7 +23,8 @@ These environment variables must be configured for the functions to work correct
 - **FUNCTIONS_WORKER_RUNTIME**: must be set to "dotnet"
 - **StorageConnectionString**: The storage connection string for the alert tables
 - **ServiceManagementType**: Either "TEST" for a test service management service or "SNOW" for ServiceNow
-- **AlertRegularExpression**: Regular expression to check for a pattern in the alert payload, useful for database checks or any other special logic (results are added to alert key to determine if an incident is unique)
+- **CustomAlertRegularExpression_DB**: Regular expression to check for a DB patterns in the alert payload, for example (({HOSTNAME}\\\\)\\w+)|(\\w+(.mdf|.ldf|.ndf)) checks for SQL Server databases.
+- **CustomAlertRegularExpression_DISK**: Regular expression to check for a disk or drive information in the alert payload, for example ([A-Z])(:)
 
 ### Variables only for ServiceNow configuration (ServiceManagementType="SNOW")
 - ServiceManagementUrl: If ServiceManagementType is set to SNOW, the URL where ServiceNow can be reached
