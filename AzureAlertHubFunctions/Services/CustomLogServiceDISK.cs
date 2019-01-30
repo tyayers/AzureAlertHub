@@ -18,8 +18,14 @@ namespace AzureAlertHubFunctions.Services
             regex = Regex;
             type = Type;
         }
-
-        public CustomLogHanderResultDto CheckCustomLog(string HostName, string InstanceName, string Description, JObject table, JArray row, string rowPayload, ILogger log)
+        public string LogType
+        {
+            get
+            {
+                return type;
+            }
+        }
+        public CustomLogHanderResultDto CheckCustomLog(string AlertName, string HostName, string InstanceName, string Description, JObject table, JArray row, string rowPayload, ILogger log)
         {
             CustomLogHanderResultDto result = new CustomLogHanderResultDto();
 

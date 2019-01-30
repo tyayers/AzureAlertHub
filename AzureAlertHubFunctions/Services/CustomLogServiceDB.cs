@@ -19,7 +19,15 @@ namespace AzureAlertHubFunctions.Services
             type = Type;
         }
 
-        public CustomLogHanderResultDto CheckCustomLog(string HostName, string InstanceName, string Description, JObject table, JArray row, string rowPayload, ILogger log)
+        public string LogType
+        {
+            get
+            {
+                return type;
+            }
+        }
+
+        public CustomLogHanderResultDto CheckCustomLog(string AlertName, string HostName, string InstanceName, string Description, JObject table, JArray row, string rowPayload, ILogger log)
         {
             CustomLogHanderResultDto result = new CustomLogHanderResultDto();
 
@@ -31,6 +39,8 @@ namespace AzureAlertHubFunctions.Services
 
             string regexString = regex;
             regexString = regexString.Replace("{HOSTNAME}", resourceHostName);
+
+            log.LogInformation($"DB regex - check for alert {AlertName}: {regexString} on {rowPayload}");
             // Check if body contains a database, then report incident
             Regex rx = new Regex(@regexString, RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
@@ -44,6 +54,8 @@ namespace AzureAlertHubFunctions.Services
                 // If we have a match with databases
                 foreach (Match match in matches)
                 {
+                    log.LogInformation($"DB regex - found match for alert {AlertName} and regex {regexString}: {match.Value}!");
+
                     AlertResult dbResult = new AlertResult() { ResourceName = HostName, InstanceName = match.Value.Replace($"{resourceHostName}\\", "") };
                     dbResult.PartitionKey = dbResult.ResourceName + " - " + dbResult.InstanceName;
                     dbResult.Type = type;

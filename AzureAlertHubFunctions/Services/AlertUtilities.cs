@@ -143,15 +143,23 @@ namespace AzureAlertHubFunctions.Services
 
                         bool handled = false;
                         List<AlertResult> localResults = new List<AlertResult>();
+                        log.LogInformation($"Starting handler check for Alert Rule {alertName}");
                         foreach (string customHandlerKey in customLogHandlers.Keys)
                         {
-                            CustomLogHanderResultDto logHandlerResult = customLogHandlers[customHandlerKey].CheckCustomLog(result.ResourceName, result.InstanceName, result.Description, table, row, Newtonsoft.Json.JsonConvert.SerializeObject(row), log);
-                            if (logHandlerResult.Handled) handled = true;
+                            ICustomLogHandler handler = customLogHandlers[customHandlerKey];
+                            CustomLogHanderResultDto logHandlerResult = handler.CheckCustomLog(alertName, result.ResourceName, result.InstanceName, result.Description, table, row, Newtonsoft.Json.JsonConvert.SerializeObject(row), log);
+                            if (logHandlerResult.Handled) {
+                                log.LogInformation($"Handler {handler.LogType} was successful for alert {alertName}");
+                                handled = true;
+                            }
+
                             localResults.AddRange(logHandlerResult.Results);
                         }
 
                         if (handled)
                         {
+                            log.LogInformation($"No handlers matched {alertName}, adding OTHER alert.");
+
                             // Custom handlers matched, add them
                             results.AddRange(localResults);
                         }
@@ -242,7 +250,7 @@ namespace AzureAlertHubFunctions.Services
                     if (alertIncident != null)
                     {
                         AlertEntity alert = GetAlert(alertIncident.AlertPartitionId, alertIncident.AlertRowId);
-                        DeleteAlert(alert);
+                        if (alert != null) DeleteAlert(alert);
                         DeleteAlertIncident(alertIncident);
                     }
                 }

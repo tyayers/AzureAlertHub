@@ -9,6 +9,8 @@ namespace AzureAlertHubFunctions.Interfaces
 {
     public interface ICustomLogHandler
     {
-        CustomLogHanderResultDto CheckCustomLog(string HostName, string InstanceName, string Description, JObject table, JArray row, string rowPayload, ILogger log);
+        CustomLogHanderResultDto CheckCustomLog(string AlertName, string HostName, string InstanceName, string Description, JObject table, JArray row, string rowPayload, ILogger log);
+
+        string LogType { get; }
     }
 }
