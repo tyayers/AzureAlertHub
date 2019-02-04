@@ -32,7 +32,7 @@ namespace AzureAlertHubFunctions.Services
             try
             {
                 // Check if body contains disk info, then report incident
-                Regex rx = new Regex(@regex, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                Regex rx = new Regex(@regex, RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
                 // Find matches in the instance text.
                 MatchCollection matches = rx.Matches(InstanceName);

@@ -42,7 +42,7 @@ namespace AzureAlertHubFunctions.Services
 
             log.LogInformation($"DB regex - check for alert {AlertName}: {regexString} on {rowPayload}");
             // Check if body contains a database, then report incident
-            Regex rx = new Regex(@regexString, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            Regex rx = new Regex(@regexString, RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
             // Find matches.
             MatchCollection matches = rx.Matches(rowPayload);
