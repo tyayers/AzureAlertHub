@@ -158,13 +158,13 @@ namespace AzureAlertHubFunctions.Services
 
                         if (handled)
                         {
-                            log.LogInformation($"No handlers matched {alertName}, adding OTHER alert.");
-
                             // Custom handlers matched, add them
                             results.AddRange(localResults);
                         }
                         else
                         {
+                            log.LogInformation($"No handlers matched {alertName}, adding OTHER alert.");
+
                             // No custom handler results, just add main alert
                             results.Add(result);
                         }

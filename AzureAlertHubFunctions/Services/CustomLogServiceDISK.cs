@@ -41,6 +41,7 @@ namespace AzureAlertHubFunctions.Services
                 {
                     result.Handled = true;
 
+                    log.LogInformation($"DISK regex {regex} successful, found {matches.Count} matches");
                     // If we have a match with disks
                     foreach (Match match in matches)
                     {
@@ -85,6 +86,8 @@ namespace AzureAlertHubFunctions.Services
                         }
                     }
                 }
+                else
+                    log.LogInformation($"DISK regex - No matches found!");
             }
             catch (Exception ex)
             {

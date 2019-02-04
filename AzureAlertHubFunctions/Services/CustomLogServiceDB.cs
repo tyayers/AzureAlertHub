@@ -63,6 +63,10 @@ namespace AzureAlertHubFunctions.Services
                     result.Results.Add(dbResult);
                 }
             }
+            else
+            {
+                log.LogInformation($"DB regex - No matches found!");
+            }
 
             return result;
         }
