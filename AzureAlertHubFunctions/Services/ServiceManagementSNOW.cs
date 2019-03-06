@@ -38,7 +38,6 @@ namespace AzureAlertHubFunctions.Services
                     short_description = alert.AlertName + " " + alert.ClientInstance,
                     description = alert.Description + " " + alert.LogAnalyticsUrl,
                     assignment_group = System.Environment.GetEnvironmentVariable("ServiceManagementAssignmentGroup"),
-                    group_family = System.Environment.GetEnvironmentVariable("ServiceManagementGroupFamily"),
                     location = System.Environment.GetEnvironmentVariable("ServiceManagementLocation"),
                     gravity = System.Environment.GetEnvironmentVariable("ServiceManagementGravity"),
                     impact = System.Environment.GetEnvironmentVariable("ServiceManagementImpact"),

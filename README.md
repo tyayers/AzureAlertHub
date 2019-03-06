@@ -34,7 +34,6 @@ These environment variables must be configured for the functions to work correct
 - ServiceManagementITService: An it_service property which is forwarded to SNOW
 - ServiceManagementContactType: a phone property which is forwarded to SNOW
 - ServiceManagementAssignmentGroup: An assignment_group property which is forwarded to SNOW
-- ServiceManagementGroupFamily: A group_family property which is forwarded to SNOW
 - ServiceManagementLocation: A location property which is forwarded to SNOW
 - ServiceManagementGravity": A gravity property which is forwarded to SNOW
 - ServiceManagementImpact": An impact property which is forwarded to SNOW
